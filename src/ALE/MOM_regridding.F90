@@ -7,7 +7,7 @@ use MOM_error_handler, only : MOM_error, FATAL, WARNING, assert
 use MOM_file_parser,   only : param_file_type, get_param, log_param
 use MOM_io,            only : file_exists, field_exists, field_size, MOM_read_data
 use MOM_io,            only : vardesc, var_desc, SINGLE_FILE
-use MOM_io,            only : MOM_infra_file, MOM_field
+use MOM_io,            only : MOM_netCDF_file, MOM_field
 use MOM_io,            only : create_MOM_file, MOM_write_field
 use MOM_io,            only : verify_variable_units, slasher
 use MOM_unit_scaling,  only : unit_scale_type
@@ -530,7 +530,7 @@ subroutine initialize_regridding(CS, GV, US, max_depth, param_file, mdl, coord_m
   endif
 
   ! ensure CS%ref_pressure is rescaled properly
-  CS%ref_pressure = (US%kg_m3_to_R * US%m_s_to_L_T**2) * CS%ref_pressure
+  CS%ref_pressure = US%Pa_to_RL2_T2 * CS%ref_pressure
 
   if (allocated(rho_target)) then
     call set_target_densities(CS, US%kg_m3_to_R*rho_target)
@@ -552,13 +552,13 @@ subroutine initialize_regridding(CS, GV, US, max_depth, param_file, mdl, coord_m
                    "The pressure that is used for calculating the coordinate "//&
                    "density.  (1 Pa = 1e4 dbar, so 2e7 is commonly used.) "//&
                    "This is only used if USE_EOS and ENABLE_THERMODYNAMICS are true.", &
-                   units="Pa", default=2.0e7, scale=US%kg_m3_to_R*US%m_s_to_L_T**2)
+                   units="Pa", default=2.0e7, scale=US%Pa_to_RL2_T2)
     else
       call get_param(param_file, mdl, create_coord_param(param_prefix, "P_REF", param_suffix), P_Ref, &
                    "The pressure that is used for calculating the diagnostic coordinate "//&
                    "density.  (1 Pa = 1e4 dbar, so 2e7 is commonly used.) "//&
                    "This is only used for the RHO coordinate.", &
-                   units="Pa", default=2.0e7, scale=US%kg_m3_to_R*US%m_s_to_L_T**2)
+                   units="Pa", default=2.0e7, scale=US%Pa_to_RL2_T2)
     endif
     call get_param(param_file, mdl, create_coord_param(param_prefix, "REGRID_COMPRESSIBILITY_FRACTION", param_suffix), &
                  tmpReal, &
@@ -2082,7 +2082,7 @@ subroutine write_regrid_file( CS, GV, filepath )
 
   type(vardesc)      :: vars(2)
   type(MOM_field)    :: fields(2)
-  type(MOM_infra_file) :: IO_handle ! The I/O handle of the fileset
+  type(MOM_netCDF_file) :: IO_handle ! The I/O handle of the fileset
   real               :: ds(GV%ke), dsi(GV%ke+1)
 
   if (CS%regridding_scheme == REGRIDDING_HYBGEN) then
